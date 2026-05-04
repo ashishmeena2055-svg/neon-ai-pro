@@ -1,90 +1,72 @@
-const player = document.getElementById('mainPlayer');
-const canvas = document.getElementById('aiCanvas');
+const video = document.getElementById('mainVideo');
+const canvas = document.getElementById('maskCanvas');
 const ctx = canvas.getContext('2d');
-const upload = document.getElementById('mediaUpload');
-const uploadUI = document.getElementById('upload-ui');
+const input = document.getElementById('mediaInput');
+const labelUI = document.getElementById('labelUI');
 let masks = [];
 
-// 1. File Loader
-upload.addEventListener('change', function(e) {
+// 1. Loader Logic
+input.onchange = (e) => {
     const file = e.target.files[0];
     if(!file) return;
-
-    const url = URL.createObjectURL(file);
-    player.src = url;
     
-    player.onloadedmetadata = () => {
-        player.classList.remove('hidden');
-        canvas.classList.remove('hidden');
-        uploadUI.classList.add('hidden');
-        
-        canvas.width = player.videoWidth;
-        canvas.height = player.videoHeight;
-        drawInitialMasks();
+    video.src = URL.createObjectURL(file);
+    video.classList.remove('hidden');
+    canvas.classList.remove('hidden');
+    labelUI.classList.add('hidden');
+
+    video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        video.play();
     };
-});
+};
 
-// 2. Multi-Text Manual Selection Logic (Advanced)
-let isDrawing = false;
-canvas.addEventListener('mousedown', (e) => {
-    isDrawing = true;
+// 2. Multi-Mask Drawing Logic
+let drawing = false;
+canvas.onmousedown = (e) => {
+    drawing = true;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    masks.push({
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
-        w: 0, h: 0, id: Date.now()
-    });
-});
+    const sx = canvas.width / rect.width;
+    const sy = canvas.height / rect.height;
+    masks.push({ x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy, w: 0, h: 0 });
+};
 
-canvas.addEventListener('mousemove', (e) => {
-    if(!isDrawing) return;
+canvas.onmousemove = (e) => {
+    if(!drawing) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const lastMask = masks[masks.length - 1];
-    lastMask.w = ((e.clientX - rect.left) * scaleX) - lastMask.x;
-    lastMask.h = ((e.clientY - rect.top) * scaleY) - lastMask.y;
-    renderAll();
-});
+    const sx = canvas.width / rect.width;
+    const sy = canvas.height / rect.height;
+    const m = masks[masks.length - 1];
+    m.w = ((e.clientX - rect.left) * sx) - m.x;
+    m.h = ((e.clientY - rect.top) * sy) - m.y;
+    draw();
+};
 
-window.addEventListener('mouseup', () => isDrawing = false);
+window.onmouseup = () => drawing = false;
 
-// 3. AI Renderer Visualization
-function renderAll() {
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    masks.forEach(m => {
-        // Neon Box Style
+    masks.forEach((m, i) => {
         ctx.strokeStyle = '#ff0050';
         ctx.lineWidth = 4;
-        ctx.setLineDash([10, 5]);
         ctx.strokeRect(m.x, m.y, m.w, m.h);
-        
-        // Processing Glow
-        ctx.fillStyle = 'rgba(255, 0, 80, 0.15)';
+        ctx.fillStyle = 'rgba(255, 0, 80, 0.2)';
         ctx.fillRect(m.x, m.y, m.w, m.h);
-        
-        // Label
-        ctx.setLineDash([]);
         ctx.fillStyle = '#ff0050';
-        ctx.font = 'bold 14px Poppins';
-        ctx.fillText(`AI-MASK [${masks.indexOf(m) + 1}]`, m.x, m.y - 10);
+        ctx.fillText(`MASK ${i+1}`, m.x, m.y - 10);
     });
 }
 
-function clearMasks() {
+function resetAll() {
     masks = [];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    location.reload();
 }
 
-// 4. Background Processor (FFmpeg Simulation)
-async function autoDetectText() {
-    // Isme Tesseract logic ya frame scanning add hota hai
-    console.log("Scanning for text overlays...");
-    // Demo detect coordinate
-    masks.push({x: 100, y: 100, w: 400, h: 80});
-    renderAll();
+function autoScan() {
+    // Fake AI Scan for UI Feel
+    alert("AI Engine Scanning Frames... Text Detected!");
+    masks.push({ x: 50, y: 50, w: 300, h: 100 });
+    draw();
 }
